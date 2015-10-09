@@ -32,16 +32,24 @@ public:
 	int getY() const { return y; }
 	int getMazeLocationID() const { return MazeLocationID; }
 	bool isBarrier() const { return barrier; }
-	bool isVisited() const { return visited; }
-	void setVisited(bool pv) { visited = pv; }
+	int getVisited() const { return visited; }
+	void visit() { visited++; }
 
 	// Possibly poor use of public access for pointers to neighbors
 	MazeLocation *left = NULL, *right = NULL, *up = NULL, *down = NULL;
+	MazeLocation * getDirection(int c) const {
+		switch (c % 4) {
+		case 0: return up;
+		case 1: return right;
+		case 2: return down;
+		case 3: return left;
+		}
+	}
 
 private:
 	int x = 0;
 	int y = 0;
-	bool visited;
+	int visited = 0;
 	bool barrier;
 	int MazeLocationID = 0;
 
@@ -220,7 +228,81 @@ int main(int argc, char *argv[])
 
 
 	// Insert solution to algorithm here
+	// Using Trémaux's algorithm
+	MazeLocation * mzloc = mazeStartPosition;
+	MazeLocation * prevLoc = NULL;
 
+	mzloc->visit();
+
+	while (mzloc != mazeGoalPosition) {
+		MazeLocation * potentialLoc = prevLoc;
+		int potentialLocVisits = (prevLoc == NULL ? 2 : prevLoc->getVisited());
+		// choose direction
+		for (int dir = 0; dir < 4; dir++) {
+			MazeLocation * testLoc = mzloc->getDirection(dir);
+
+			// trying to go out of bounds
+			if (testLoc == NULL)
+				continue;
+
+			// trying to go into barrier
+			if (testLoc->isBarrier())
+				continue;
+
+			if (testLoc->getVisited() <= potentialLocVisits) {
+				potentialLoc = testLoc;
+				potentialLocVisits = testLoc->getVisited();
+			}
+		}
+		if (potentialLoc == NULL) {
+			cout << "No solution." << endl;
+			break;
+		}
+		else {
+			// When arriving at a marked junction and if your current path is marked only once then turn around and walk back
+			if (potentialLoc->getVisited() > 0 && mzloc->getVisited() == 1) {
+				potentialLoc = prevLoc;
+			}
+			if (prevLoc == potentialLoc)
+				mzloc->visit();
+			prevLoc = mzloc;
+			mzloc = potentialLoc;
+			mzloc->visit();
+		}
+	}
+
+
+	// debug
+	// draw top wall
+	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
+	cout << endl;
+
+	// draw cells
+	for (int rowi = 0; rowi < MAZE_HEIGHT; rowi++) {
+		MazeLocation * mzloc = mazeStartPosition;
+		// move down to row
+		for (int rowto = 0; rowto < rowi; rowto++) {
+			mzloc = mzloc->down;
+		}
+		cout << '#';
+		for (int coli = 0; coli < MAZE_WIDTH; coli++) {
+			if (mzloc->isBarrier()) {
+				cout << 'X';
+			}
+			else if (mzloc->getVisited() == 0) {
+				cout << ' ';
+			}
+			else {
+				cout << mzloc->getVisited();
+			}
+			mzloc = mzloc->right;
+		}
+		cout << '#';
+		cout << endl;
+	}
+	// draw bottom wall
+	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
+	cout << endl;
 
 	int pause;
 	cin >> pause;
