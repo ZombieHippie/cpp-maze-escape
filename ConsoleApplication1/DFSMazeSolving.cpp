@@ -352,14 +352,19 @@ int main(int argc, char *argv[])
 
 	// trace steps
 	if (solved) {
+		int steps = -1;
 		MazeLocation * prev = NULL;
-		MazeLocation * tracer = mazeGoalPosition;
-		while (tracer != mazeStartPosition) {
+		MazeLocation * tracer = mazeStartPosition;
+		while (tracer != NULL) {
+			steps++;
+			cout << '(' << tracer->getX() << ',' << tracer->getY() << ')';
 			MazeLocation * newT = tracer->traceBackFrom(prev);
 			prev = tracer;
 			tracer = newT;
-			cout << '(' << tracer->getX() << ',' << tracer->getY() << ')' << endl;
+			if (tracer != NULL)
+				cout << ", ";
 		}
+		cout << " with length " << steps << '.' << endl;
 	}
 	
 
