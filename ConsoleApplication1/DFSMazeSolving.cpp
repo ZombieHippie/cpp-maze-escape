@@ -34,10 +34,29 @@ public:
 	bool isBarrier() const { return barrier; }
 	int getVisited() const { return visited; }
 	void visit() { visited++; }
+	// get mark count between paths
+	int getMarks(MazeLocation * neighbor) const {
+		int dir = getDirection(neighbor);
+		if (dir != -1)
+			return marks[dir];
+		else
+			// indicator that wall
+			return -1;
+	}
+	// add marks between paths
+	int markPath(MazeLocation * neighbor) {
+		int direction = getDirection(neighbor);
+		// add mark from to
+		marks[direction] ++;
+		// add mark on to from
+		getNeighbor(direction)->marks[(direction + 2) % 4]++;
+		
+		return marks[direction];
+	}
 
 	// Possibly poor use of public access for pointers to neighbors
 	MazeLocation *left = NULL, *right = NULL, *up = NULL, *down = NULL;
-	MazeLocation * getDirection(int c) const {
+	MazeLocation * getNeighbor(int c) const {
 		switch (c % 4) {
 		case 0: return up;
 		case 1: return right;
@@ -45,11 +64,32 @@ public:
 		case 3: return left;
 		}
 	}
+	int getDirection(MazeLocation * loc) const {
+		if (loc == up)
+			return 0;
+		else if (loc == right)
+			return 1;
+		else if (loc == down)
+			return 2;
+		else if (loc == left)
+			return 3;
+		else
+			return -1;
+	}
+	MazeLocation * traceBackFrom(MazeLocation * from) const {
+		int fromDir = getDirection(from);
+		for (int dir = 0; dir < 4; dir++) {
+			if (dir != fromDir && marks[dir] == 1)
+				return getNeighbor(dir);
+		}
+		return NULL;
+	}
 
 private:
 	int x = 0;
 	int y = 0;
 	int visited = 0;
+	int marks[4];
 	bool barrier;
 	int MazeLocationID = 0;
 
@@ -232,14 +272,14 @@ int main(int argc, char *argv[])
 	MazeLocation * mzloc = mazeStartPosition;
 	MazeLocation * prevLoc = NULL;
 
-	mzloc->visit();
-
+	//mzloc->visit();
+	bool solved = true;
 	while (mzloc != mazeGoalPosition) {
 		MazeLocation * potentialLoc = prevLoc;
-		int potentialLocVisits = (prevLoc == NULL ? 2 : prevLoc->getVisited());
+		int potentialLocMarks = (prevLoc == NULL ? 2 : mzloc->getMarks(prevLoc));
 		// choose direction
 		for (int dir = 0; dir < 4; dir++) {
-			MazeLocation * testLoc = mzloc->getDirection(dir);
+			MazeLocation * testLoc = mzloc->getNeighbor(dir);
 
 			// trying to go out of bounds
 			if (testLoc == NULL)
@@ -249,33 +289,33 @@ int main(int argc, char *argv[])
 			if (testLoc->isBarrier())
 				continue;
 
-			if (testLoc->getVisited() <= potentialLocVisits) {
+			// acknowledge the amount of marks from to
+			if (mzloc->getMarks(testLoc) <= potentialLocMarks) {
 				potentialLoc = testLoc;
-				potentialLocVisits = testLoc->getVisited();
+				potentialLocMarks = mzloc->getMarks(testLoc);
 			}
 		}
 		if (potentialLoc == NULL) {
 			cout << "No solution." << endl;
+			solved = false;
 			break;
 		}
 		else {
 			// When arriving at a marked junction and if your current path is marked only once then turn around and walk back
-			if (potentialLoc->getVisited() > 0 && mzloc->getVisited() == 1) {
+			if (mzloc->getMarks(potentialLoc) > 0 && mzloc->getMarks(prevLoc) == 1) {
 				potentialLoc = prevLoc;
 			}
-			if (prevLoc == potentialLoc)
-				mzloc->visit();
 			prevLoc = mzloc;
+			mzloc->markPath(potentialLoc);
 			mzloc = potentialLoc;
-			mzloc->visit();
 		}
 	}
 
 
 	// debug
 	// draw top wall
-	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
-	cout << endl;
+	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << "|X-X-X-X"; }
+	cout << '|' << endl;
 
 	// draw cells
 	for (int rowi = 0; rowi < MAZE_HEIGHT; rowi++) {
@@ -284,25 +324,44 @@ int main(int argc, char *argv[])
 		for (int rowto = 0; rowto < rowi; rowto++) {
 			mzloc = mzloc->down;
 		}
-		cout << '#';
+		cout << "|X-X-X-X";
 		for (int coli = 0; coli < MAZE_WIDTH; coli++) {
 			if (mzloc->isBarrier()) {
-				cout << 'X';
-			}
-			else if (mzloc->getVisited() == 0) {
-				cout << ' ';
-			}
-			else {
-				cout << mzloc->getVisited();
+				cout << "|X-X-X-X";
+			} else {
+				cout << '|';
+				MazeLocation * neighbor = NULL;
+				for (int dir = 0; dir < 4; dir++) {
+					if (dir > 0)
+						cout << '-';
+					neighbor = mzloc->getNeighbor(dir);
+					if (neighbor != NULL && !neighbor->isBarrier())
+						cout << mzloc->getMarks(neighbor);
+					else
+						cout << ' ';
+				}
 			}
 			mzloc = mzloc->right;
 		}
-		cout << '#';
-		cout << endl;
+		cout << "|X-X-X-X";
+		cout << '|' << endl;
 	}
 	// draw bottom wall
-	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
-	cout << endl;
+	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << "|X-X-X-X"; }
+	cout << '|' << endl;
+
+	// trace steps
+	if (solved) {
+		MazeLocation * prev = NULL;
+		MazeLocation * tracer = mazeGoalPosition;
+		while (tracer != mazeStartPosition) {
+			MazeLocation * newT = tracer->traceBackFrom(prev);
+			prev = tracer;
+			tracer = newT;
+			cout << '(' << tracer->getX() << ',' << tracer->getY() << ')' << endl;
+		}
+	}
+	
 
 	int pause;
 	cin >> pause;
