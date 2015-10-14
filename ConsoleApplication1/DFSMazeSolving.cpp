@@ -89,7 +89,7 @@ private:
 	int x = 0;
 	int y = 0;
 	int visited = 0;
-	int marks[4];
+	int marks[4] {0};
 	bool barrier;
 	int MazeLocationID = 0;
 
@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
 		previousLocation = previousLocation->down; // ...and down to the initial column of the next row.
 	}
 	
-
+	
 	// debug
 	// draw top wall
 	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
@@ -265,10 +265,10 @@ int main(int argc, char *argv[])
 	// draw bottom wall
 	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << '#'; }
 	cout << endl;
-
+	
 
 	// Insert solution to algorithm here
-	// Using Trémaux's algorithm
+	// Using TrÃ©maux's algorithm
 	MazeLocation * mzloc = mazeStartPosition;
 	MazeLocation * prevLoc = NULL;
 
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-
+	
 	// debug
 	// draw top wall
 	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << "|X-X-X-X"; }
@@ -349,7 +349,7 @@ int main(int argc, char *argv[])
 	// draw bottom wall
 	for (int coltw = -2; coltw < MAZE_WIDTH; coltw++) { cout << "|X-X-X-X"; }
 	cout << '|' << endl;
-
+	//*/
 	// trace steps
 	if (solved) {
 		int steps = -1;
